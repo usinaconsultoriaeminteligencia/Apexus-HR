@@ -1,6 +1,6 @@
 """Small LGPD helper used by services that manage candidate data."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class LGPDCompliance:
@@ -11,7 +11,7 @@ class LGPDCompliance:
         for key in ("name", "email", "phone", "cpf", "linkedin_url"):
             if key in anonymized:
                 anonymized[key] = None
-        anonymized["anonymized_at"] = datetime.utcnow().isoformat() + "Z"
+        anonymized["anonymized_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         return anonymized
 
     def build_data_export(self, candidate):
@@ -27,7 +27,7 @@ class LGPDCompliance:
             }
 
         return {
-            "exported_at": datetime.utcnow().isoformat() + "Z",
+            "exported_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "legal_basis": "LGPD data portability request",
             "data": data,
         }

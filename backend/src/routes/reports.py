@@ -3,7 +3,7 @@ Rotas de relatórios do sistema
 """
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, distinct, and_, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.models import db
 from src.models.candidate import Candidate
 from src.models.interview import Interview
@@ -13,7 +13,7 @@ from functools import wraps
 from flask import jsonify, request
 import jwt
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from src.models.user import User
 from src.models import db
 
@@ -41,7 +41,7 @@ def get_candidate_reports():
         
         # Aplicar filtro de período
         if period != 'all':
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             if period == 'today':
                 start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
             elif period == 'week':
@@ -124,7 +124,7 @@ def get_candidate_reports():
                 'score_by_status': score_by_status,
                 'candidates': [c.to_dict() for c in candidates[:100]],  # Limitar a 100 para performance
                 'period': period,
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }
         })
         
@@ -148,7 +148,7 @@ def get_interview_reports():
         
         # Aplicar filtro de período
         if period != 'all':
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             if period == 'today':
                 start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
             elif period == 'week':
@@ -256,7 +256,7 @@ def get_interview_reports():
                     for i in interviews[:100]  # Limitar a 100 para performance
                 ],
                 'period': period,
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }
         })
         

@@ -7,7 +7,7 @@ resposta de UMA entrevista, com evidência textual, versão do modelo e
 status de revisão humana. É a base da trilha de auditoria exigida pela
 tese de "sistema auditável de inteligência comportamental" (Onda 2).
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -76,7 +76,7 @@ class InterviewAssessment(BaseModel):
         self.human_review_status = status
         self.human_reviewer_id = reviewer_id
         self.human_review_notes = notes
-        self.human_reviewed_at = datetime.utcnow()
+        self.human_reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if adjusted_score is not None:
             self.adjusted_score = float(adjusted_score)
 

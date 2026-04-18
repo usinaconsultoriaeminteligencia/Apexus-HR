@@ -3,7 +3,7 @@
 Testes unitários para modelos de dados
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from src.models.user import User
 from src.models.candidate import Candidate
@@ -227,7 +227,7 @@ class TestCandidateModel:
             status='rejeitado',
             recruiter_id=sample_user.id
         )
-        old_candidate.created_at = datetime.utcnow() - timedelta(days=800)  # Mais de 2 anos
+        old_candidate.created_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=800)  # Mais de 2 anos
         
         db_session.add(old_candidate)
         db_session.commit()
@@ -242,7 +242,7 @@ class TestCandidateModel:
             status='aprovado',
             recruiter_id=sample_user.id
         )
-        approved_candidate.created_at = datetime.utcnow() - timedelta(days=800)
+        approved_candidate.created_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=800)
         
         db_session.add(approved_candidate)
         db_session.commit()

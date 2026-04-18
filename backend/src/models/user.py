@@ -83,12 +83,12 @@ class User(BaseModel):
         self.login_attempts = str(attempts)
         if attempts >= 5:
             self.is_locked = True
-            self.locked_until = datetime.utcnow() + timedelta(minutes=30)
+            self.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
 
     def is_account_locked(self):
         if not self.is_locked:
             return False
-        if self.locked_until and datetime.utcnow() > self.locked_until:
+        if self.locked_until and datetime.now(timezone.utc).replace(tzinfo=None) > self.locked_until:
             self.is_locked = False
             self.locked_until = None
             self.login_attempts = '0'

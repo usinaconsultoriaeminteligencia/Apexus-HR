@@ -3,7 +3,7 @@ Modelo de feedback/avaliação do sistema
 """
 from sqlalchemy import Column, String, Text, Integer, Float, DateTime, ForeignKey, Enum
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from src.models import db
 from src.models import BaseModel
@@ -65,7 +65,7 @@ class Feedback(BaseModel):
         """Marca feedback como resolvido"""
         self.status = 'resolved'
         self.resolved_by = admin_id
-        self.resolved_at = datetime.utcnow()
+        self.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if response:
             self.admin_response = response
     

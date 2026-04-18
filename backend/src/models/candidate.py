@@ -2,7 +2,7 @@
 """
 Modelo de candidato com conformidade LGPD (Flask-SQLAlchemy)
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 from src.models import db
@@ -107,7 +107,7 @@ class Candidate(BaseModel):
         if self.anonymized:
             return False
         if self.status in ['rejeitado', 'desistiu']:
-            return datetime.utcnow() > (self.created_at + timedelta(days=2*365))
+            return datetime.now(timezone.utc).replace(tzinfo=None) > (self.created_at + timedelta(days=2*365))
         return False
 
     def get_status_display(self):

@@ -3,7 +3,7 @@ Serviço de gerenciamento de agendamentos
 """
 import logging
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from ..models import Appointment, Candidate, User, Interview
@@ -87,7 +87,7 @@ class AppointmentService:
                     query = query.filter(Appointment.scheduled_at <= filters['date_to'])
                 
                 if filters.get('upcoming_only'):
-                    query = query.filter(Appointment.scheduled_at > datetime.utcnow())
+                    query = query.filter(Appointment.scheduled_at > datetime.now(timezone.utc).replace(tzinfo=None))
             
             # Ordenação
             order_by = filters.get('order_by', 'scheduled_at') if filters else 'scheduled_at'
@@ -136,7 +136,7 @@ class AppointmentService:
                     'appointment_id': appointment.id,
                     'candidate_name': appointment.candidate.full_name if appointment.candidate else 'Candidato',
                     'scheduled_at': appointment.scheduled_at.isoformat(),
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 }
             )
             
@@ -166,7 +166,7 @@ class AppointmentService:
                 {
                     'appointment_id': appointment.id,
                     'reason': reason,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 }
             )
             
@@ -197,7 +197,7 @@ class AppointmentService:
                 {
                     'appointment_id': appointment.id,
                     'reason': reason,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 }
             )
             
@@ -207,7 +207,7 @@ class AppointmentService:
                 {
                     'appointment_id': appointment.id,
                     'reason': reason,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 }
             )
             
@@ -227,8 +227,8 @@ class AppointmentService:
                 and_(
                     Appointment.is_active == True,
                     Appointment.status == 'confirmed',
-                    Appointment.scheduled_at >= datetime.utcnow(),
-                    Appointment.scheduled_at <= datetime.utcnow() + timedelta(days=days_ahead)
+                    Appointment.scheduled_at >= datetime.now(timezone.utc).replace(tzinfo=None),
+                    Appointment.scheduled_at <= datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days_ahead)
                 )
             )
             
@@ -279,7 +279,7 @@ class AppointmentService:
                     'title': appointment.title,
                     'scheduled_at': appointment.scheduled_at.isoformat(),
                     'appointment_token': appointment.appointment_token,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 }
             )
         except Exception as e:

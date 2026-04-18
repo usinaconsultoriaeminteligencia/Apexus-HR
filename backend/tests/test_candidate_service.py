@@ -3,7 +3,7 @@ Testes para o serviço de candidatos
 """
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.services.candidate_service import CandidateService
 from src.models import Candidate
 
@@ -70,11 +70,13 @@ class TestCandidateService:
         # Mock dos candidatos
         candidates = [Mock(), Mock(), Mock()]
         
-        # Mock da query
+        # Mock da query — suporta múltiplos .filter() encadeados (fluent interface)
         mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
         mock_query.count.return_value = 3
         mock_query.offset.return_value.limit.return_value.all.return_value = candidates
-        
+
         self.mock_db.query.return_value.filter.return_value = mock_query
         
         filters = {
@@ -165,7 +167,7 @@ class TestCandidateService:
         candidate.id = 1
         candidate.anonymized = False
         candidate.to_dict.return_value = {'id': 1, 'name': 'João'}
-        candidate.get_retention_date.return_value = datetime.utcnow() + timedelta(days=365)
+        candidate.get_retention_date.return_value = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365)
         
         interviews = [Mock()]
         interviews[0].to_dict.return_value = {'id': 1, 'status': 'completed'}

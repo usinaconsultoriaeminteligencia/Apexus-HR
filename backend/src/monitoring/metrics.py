@@ -7,7 +7,7 @@ import time
 import functools
 import psutil
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
 from threading import Lock
 from flask import request, g
@@ -27,7 +27,7 @@ class MetricsCollector:
         self.audio_processing_time = deque(maxlen=1000)
         self.db_query_time = deque(maxlen=1000)
         self.lock = Lock()
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
         
         # Métricas de negócio
         self.interviews_completed = 0
@@ -92,7 +92,7 @@ class MetricsCollector:
     def get_application_metrics(self):
         """Retorna métricas da aplicação"""
         with self.lock:
-            uptime = (datetime.utcnow() - self.start_time).total_seconds()
+            uptime = (datetime.now(timezone.utc).replace(tzinfo=None) - self.start_time).total_seconds()
             
             # Calcular médias
             avg_ai_time = sum(self.ai_processing_time) / len(self.ai_processing_time) if self.ai_processing_time else 0
@@ -169,7 +169,7 @@ class MetricsCollector:
         
         return {
             'status': status,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             'issues': issues,
             'uptime_seconds': app_metrics.get('uptime_seconds', 0)
         }
@@ -275,7 +275,7 @@ class PerformanceMonitor:
                 'type': 'cpu_high',
                 'message': f"CPU usage is {system_metrics['cpu_usage_percent']:.1f}%",
                 'severity': 'warning',
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             })
         
         # Verificar memória
@@ -284,7 +284,7 @@ class PerformanceMonitor:
                 'type': 'memory_high',
                 'message': f"Memory usage is {system_metrics['memory_usage_percent']:.1f}%",
                 'severity': 'warning',
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             })
         
         # Verificar taxa de erro
@@ -293,7 +293,7 @@ class PerformanceMonitor:
                 'type': 'error_rate_high',
                 'message': f"Error rate is {app_metrics['error_rate']:.2%}",
                 'severity': 'critical',
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             })
         
         # Verificar tempo de processamento de IA
@@ -302,7 +302,7 @@ class PerformanceMonitor:
                 'type': 'ai_processing_slow',
                 'message': f"AI processing time is {app_metrics['avg_ai_processing_time_ms']:.0f}ms",
                 'severity': 'warning',
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             })
         
         return alerts

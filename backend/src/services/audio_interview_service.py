@@ -25,7 +25,7 @@ import os
 import struct
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ..models import db
@@ -230,7 +230,7 @@ class AudioInterviewService:
                 current_question_index=0,
                 total_questions=len(questions),
             )
-            interview.started_at = datetime.utcnow()
+            interview.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
             interview.set_questions_list(questions_payload)
             token = interview.generate_interview_token(expiration_hours=48)
 
@@ -333,7 +333,7 @@ class AudioInterviewService:
             current['transcription'] = transcript
             current['audio_size_bytes'] = len(audio_data)
             current['content_type'] = content_type
-            current['answered_at'] = datetime.utcnow().isoformat()
+            current['answered_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             current['analysis'] = analysis
             questions[idx] = current
 

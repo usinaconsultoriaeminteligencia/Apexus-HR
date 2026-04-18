@@ -5,7 +5,7 @@ import logging
 from typing import Dict, List, Optional, Any
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask import request
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 logger = logging.getLogger(__name__)
@@ -151,7 +151,7 @@ def setup_socketio_handlers(socketio_instance: SocketIO):
             # Enviar confirmação
             emit('connected', {
                 'user_id': user_id,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             })
             
             logger.info(f"Usuário {user_id} conectado via WebSocket")
@@ -205,7 +205,7 @@ def setup_socketio_handlers(socketio_instance: SocketIO):
     @socketio_instance.on('ping')
     def handle_ping():
         """Handler para ping/pong (keepalive)"""
-        emit('pong', {'timestamp': datetime.utcnow().isoformat()})
+        emit('pong', {'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()})
     
     logger.info("Handlers WebSocket configurados")
 

@@ -2,7 +2,7 @@
 """
 Modelo base com funcionalidades de auditoria e conformidade LGPD (Flask-SQLAlchemy)
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 def create_audit_mixin(db):
     """Cria o AuditMixin com as colunas de auditoria"""
@@ -27,11 +27,11 @@ def create_audit_mixin(db):
 
         def anonymize(self):
             self.anonymized = True
-            self.anonymized_date = datetime.utcnow()
+            self.anonymized_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
         def soft_delete(self):
             self.is_active = False
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     return AuditMixin
 

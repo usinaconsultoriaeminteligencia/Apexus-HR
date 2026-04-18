@@ -3,7 +3,7 @@ Rotas para salvar avaliações de entrevistas
 """
 from flask import Blueprint, request, jsonify
 from ..models import db, Interview, Candidate, User
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import json
 
@@ -139,7 +139,7 @@ def save_assessment():
             logger.info(f"Nova entrevista criada para candidato {candidate_name}")
         
         # Atualiza dados da entrevista com resultados
-        interview.completed_at = datetime.utcnow()
+        interview.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         
         # Scores
         interview.overall_score = float(result.get('score_final', 0))
@@ -171,7 +171,7 @@ def save_assessment():
             'pontuacao_tecnica': result.get('pontuacao_tecnica', 0),
             'pontuacao_comportamental': result.get('pontuacao_comportamental', 0),
             'seniority': seniority,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         }
         
         # Usa método do modelo Interview para salvar (já faz json.dumps)

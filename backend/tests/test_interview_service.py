@@ -155,24 +155,34 @@ class TestInterviewService:
     
     def test_analyze_content_with_ai(self):
         """Testa análise de conteúdo com IA"""
+        from types import SimpleNamespace
         responses = [
             {
                 'question': 'Qual sua experiência com Python?',
                 'response': 'Tenho 3 anos de experiência com Python...'
             }
         ]
-        
-        with patch('openai.chat.completions.create') as mock_openai:
-            mock_response = Mock()
-            mock_response.choices[0].message.content = json.dumps({
-                'relevance': 85,
-                'technical_accuracy': 80,
-                'communication': 90
-            })
-            mock_openai.return_value = mock_response
-            
+
+        fake_response = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content=json.dumps({
+                            'relevance': 85,
+                            'technical_accuracy': 80,
+                            'communication': 90
+                        })
+                    )
+                )
+            ]
+        )
+
+        # openai>=1.0: patch o módulo openai tal como importado em interview_service
+        with patch('src.services.interview_service.openai') as mock_openai:
+            mock_openai.chat.completions.create.return_value = fake_response
+
             scores = self.service._analyze_content_with_ai(responses, "Desenvolvedor Python")
-            
+
             assert scores['relevance'] == 85
             assert scores['technical_accuracy'] == 80
             assert scores['communication'] == 90

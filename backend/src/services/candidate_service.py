@@ -5,7 +5,7 @@ import logging
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from ..models import Candidate, User, Interview
 from ..utils.lgpd_compliance import LGPDCompliance
 
@@ -42,7 +42,7 @@ class CandidateService:
                 recruiter_id=recruiter_id,
                 status='novo',
                 consent_given=candidate_data.get('consent_given', False),
-                consent_date=datetime.utcnow() if candidate_data.get('consent_given') else None
+                consent_date=datetime.now(timezone.utc).replace(tzinfo=None) if candidate_data.get('consent_given') else None
             )
             
             # Definir habilidades
@@ -175,7 +175,7 @@ class CandidateService:
             if 'skills' in update_data:
                 candidate.set_skills_list(update_data['skills'])
             
-            candidate.updated_at = datetime.utcnow()
+            candidate.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             
             db.commit()
             db.refresh(candidate)
@@ -254,7 +254,7 @@ class CandidateService:
             export_data = {
                 'candidate_data': candidate.to_dict(include_sensitive=True),
                 'interviews': [interview.to_dict(include_detailed=True) for interview in interviews],
-                'export_date': datetime.utcnow().isoformat(),
+                'export_date': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 'data_retention_info': {
                     'retention_date': candidate.get_retention_date().isoformat(),
                     'can_request_deletion': True
@@ -314,7 +314,7 @@ class CandidateService:
             # Candidatos por mês (últimos 6 meses)
             monthly_stats = []
             for i in range(6):
-                start_date = datetime.utcnow().replace(day=1) - timedelta(days=30*i)
+                start_date = datetime.now(timezone.utc).replace(tzinfo=None).replace(day=1) - timedelta(days=30*i)
                 end_date = start_date + timedelta(days=31)
                 
                 count = base_query.filter(

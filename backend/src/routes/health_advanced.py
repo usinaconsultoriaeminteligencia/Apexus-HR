@@ -6,7 +6,7 @@ Implementa verificações de dependências, métricas e alertas
 import os
 import time
 import psutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from sqlalchemy import text
 import redis
@@ -384,7 +384,7 @@ class HealthChecker:
         
         return {
             'status': overall_status,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'checks': results,
             'issues': all_issues,
             'summary': {
@@ -404,7 +404,7 @@ def health_simple():
     try:
         # Verificação básica de banco
         db.session.execute(text('SELECT 1'))
-        return {'status': 'healthy', 'timestamp': datetime.utcnow().isoformat() + 'Z'}, 200
+        return {'status': 'healthy', 'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'}, 200
     except Exception as e:
         logger.error(f"Simple health check failed: {e}")
         return {'status': 'unhealthy', 'error': str(e)}, 503
@@ -433,7 +433,7 @@ def health_metrics():
         health_status = metrics_collector.get_health_status()
         
         return jsonify({
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'system': system_metrics,
             'application': app_metrics,
             'endpoints': endpoint_metrics,
@@ -451,7 +451,7 @@ def health_alerts():
         alerts = performance_monitor.check_performance_alerts()
         
         return jsonify({
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'alerts': alerts,
             'alert_count': len(alerts),
             'has_critical_alerts': any(alert['severity'] == 'critical' for alert in alerts)
@@ -476,7 +476,7 @@ def health_readiness():
         
         return jsonify({
             'ready': ready,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'checks': checks
         }), 200 if ready else 503
         
@@ -491,7 +491,7 @@ def health_liveness():
         # Verificação básica se a aplicação está viva
         return jsonify({
             'alive': True,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'uptime_seconds': metrics_collector.get_application_metrics().get('uptime_seconds', 0)
         }), 200
         

@@ -16,7 +16,7 @@ record inactive by setting ``is_active`` to ``False``.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from src.models import db
@@ -68,7 +68,7 @@ def set_consent():
     if hasattr(model, "consent_given"):
         setattr(model, "consent_given", bool(consent))
         if bool(consent):
-            setattr(model, "consent_date", datetime.utcnow())
+            setattr(model, "consent_date", datetime.now(timezone.utc).replace(tzinfo=None))
         else:
             setattr(model, "consent_date", None)
         db.session.commit()

@@ -3,7 +3,7 @@ Rotas de analytics do sistema
 """
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, extract, and_, or_, case, text, literal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.models import db
 from src.models.candidate import Candidate
 from src.models.interview import Interview
@@ -13,7 +13,7 @@ from functools import wraps
 from flask import jsonify, request
 import jwt
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from src.models.user import User
 from src.models import db
 
@@ -32,7 +32,7 @@ def get_kpis():
     Retorna KPIs principais do sistema
     """
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         thirty_days_ago = now - timedelta(days=30)
         seven_days_ago = now - timedelta(days=7)
         
@@ -118,7 +118,7 @@ def get_kpis():
                     'avg_hiring_days': round(avg_hiring_time, 1),
                     'dropout_rate': round(dropout_rate, 1)
                 },
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }
         })
         
@@ -136,7 +136,7 @@ def get_trends():
         period = request.args.get('period', '30')  # dias
         period_days = int(period)
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         start_date = now - timedelta(days=period_days)
         
         # Tendência de candidatos por dia
@@ -269,7 +269,7 @@ def get_trends():
                     for item in position_distribution
                 ],
                 'period_days': period_days,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }
         })
         
@@ -343,7 +343,7 @@ def compare_periods():
                     'interviews': round(interviews_change, 1),
                     'hired': round(hired_change, 1)
                 },
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }
         })
         

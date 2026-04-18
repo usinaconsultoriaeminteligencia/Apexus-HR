@@ -9,7 +9,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import request, g, has_request_context
 import traceback
 from typing import Dict, Any, Optional
@@ -19,7 +19,7 @@ class StructuredFormatter(logging.Formatter):
     
     def format(self, record):
         log_data = {
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),
@@ -75,7 +75,7 @@ class AuditLogger:
             'details': details or {},
             'ip_address': request.remote_addr if has_request_context() else None,
             'user_agent': request.headers.get('User-Agent', '') if has_request_context() else '',
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'
         }
         
         self.logger.info("User action", extra={'audit_data': audit_data})
@@ -89,7 +89,7 @@ class AuditLogger:
             'operation': operation,
             'user_id': user_id or getattr(g, 'user_id', None),
             'ip_address': request.remote_addr if has_request_context() else None,
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'
         }
         
         self.logger.info("Data access", extra={'access_data': access_data})
@@ -103,7 +103,7 @@ class AuditLogger:
             'details': details or {},
             'ip_address': request.remote_addr if has_request_context() else None,
             'user_agent': request.headers.get('User-Agent', '') if has_request_context() else '',
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'
         }
         
         self.logger.warning("Security event", extra={'security_data': security_data})
@@ -297,7 +297,7 @@ class SQLAlchemyLogHandler(logging.Handler):
             query_info = {
                 'query': record.getMessage(),
                 'level': record.levelname,
-                'timestamp': datetime.utcnow().isoformat() + 'Z'
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'
             }
             
             # Log para análise de performance

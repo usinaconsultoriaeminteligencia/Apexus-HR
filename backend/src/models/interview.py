@@ -3,7 +3,7 @@ Modelo de entrevista com análise de áudio e IA
 """
 from sqlalchemy import Column, String, Text, Integer, Float, DateTime, JSON, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import uuid
 from . import BaseModel
@@ -102,7 +102,7 @@ class Interview(BaseModel):
             'question': question,
             'response': response,
             'audio_path': audio_path,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             'question_index': len(questions)
         }
         
@@ -183,12 +183,12 @@ class Interview(BaseModel):
     
     def start_interview(self):
         """Inicia a entrevista"""
-        self.started_at = datetime.utcnow()
+        self.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.status = 'em_andamento'
     
     def complete_interview(self):
         """Finaliza a entrevista"""
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.status = 'concluida'
         
         if self.started_at is not None and self.completed_at is not None:
@@ -220,7 +220,7 @@ class Interview(BaseModel):
     def generate_interview_token(self, expiration_hours=48):
         """Gera token único para acesso público à entrevista"""
         self.interview_token = str(uuid.uuid4())
-        self.token_expires_at = datetime.utcnow() + timedelta(hours=expiration_hours)
+        self.token_expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=expiration_hours)
         self.invitation_status = 'pending'
         return self.interview_token
     
@@ -229,13 +229,13 @@ class Interview(BaseModel):
         if self.interview_token is None or self.token_expires_at is None:
             return False
         if isinstance(self.token_expires_at, datetime):
-            return datetime.utcnow() < self.token_expires_at
+            return datetime.now(timezone.utc).replace(tzinfo=None) < self.token_expires_at
         return False
     
     def record_token_access(self):
         """Registra acesso ao token"""
         if self.token_accessed_at is None:
-            self.token_accessed_at = datetime.utcnow()
+            self.token_accessed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             self.invitation_status = 'opened'
         self.token_access_count = as_int(self.token_access_count) + 1
     

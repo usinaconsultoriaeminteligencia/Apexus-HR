@@ -4,7 +4,7 @@ Serviço de compartilhamento de entrevistas via email, SMS e WhatsApp
 import os
 import logging
 from typing import Dict, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 # Referencias às integrações SendGrid e Twilio
@@ -108,7 +108,7 @@ class SharingService:
             if success:
                 # Atualizar dados da entrevista
                 setattr(interview, "invitation_channel", channel)
-                setattr(interview, "invitation_sent_at", datetime.utcnow())
+                setattr(interview, "invitation_sent_at", datetime.now(timezone.utc).replace(tzinfo=None))
                 setattr(interview, "invitation_status", "sent")
                 setattr(interview, "invitation_phone", phone)
                 setattr(interview, "invitation_message", custom_message)

@@ -3,7 +3,7 @@ Serviço de gerenciamento de feedback/avaliações
 """
 import logging
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from ..models import Feedback, User
@@ -142,7 +142,7 @@ class FeedbackService:
                     'feedback_id': feedback.id,
                     'status': status,
                     'response': response,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 }
             )
             
@@ -214,7 +214,7 @@ class FeedbackService:
             notification_data = {
                 'type': 'new_feedback',
                 'feedback': feedback.to_dict(),
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }
             
             # Enviar para cada admin

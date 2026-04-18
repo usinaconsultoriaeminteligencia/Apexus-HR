@@ -4,7 +4,7 @@ Serviço de entrevistas com IA e análise de áudio
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 import openai
 from sqlalchemy.orm import Session
@@ -163,7 +163,7 @@ class InterviewService:
                 'audio_path': audio_file_path,
                 'audio_analysis': audio_analysis,
                 'content_analysis': content_analysis,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             })
             
             interview.set_questions_list(questions)

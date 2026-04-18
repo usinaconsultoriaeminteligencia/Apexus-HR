@@ -3,7 +3,7 @@ Modelo de agendamento de entrevistas
 """
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Boolean, Enum
 from sqlalchemy.orm import relationship
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import uuid
 from . import BaseModel
@@ -66,7 +66,7 @@ class Appointment(BaseModel):
         self.status = 'confirmed'
         self.confirmation_status = 'confirmed'
         self.confirmation_sent = True
-        self.confirmation_sent_at = datetime.utcnow()
+        self.confirmation_sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     def decline(self, reason: str = None):
         """Recusa o agendamento"""
@@ -79,7 +79,7 @@ class Appointment(BaseModel):
         """Cancela o agendamento"""
         self.status = 'cancelled'
         self.cancelled_by = user_id
-        self.cancelled_at = datetime.utcnow()
+        self.cancelled_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if reason:
             self.cancellation_reason = reason
     
@@ -87,13 +87,13 @@ class Appointment(BaseModel):
         """Verifica se o agendamento está no futuro"""
         if not self.scheduled_at:
             return False
-        return datetime.utcnow() < self.scheduled_at
+        return datetime.now(timezone.utc).replace(tzinfo=None) < self.scheduled_at
     
     def is_past(self) -> bool:
         """Verifica se o agendamento já passou"""
         if not self.scheduled_at:
             return False
-        return datetime.utcnow() > (self.scheduled_at + timedelta(minutes=self.duration_minutes))
+        return datetime.now(timezone.utc).replace(tzinfo=None) > (self.scheduled_at + timedelta(minutes=self.duration_minutes))
     
     def get_reminder_time(self, hours_before: int = 24) -> datetime:
         """Retorna horário para enviar lembrete"""
@@ -110,7 +110,7 @@ class Appointment(BaseModel):
         if not reminder_time:
             return False
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         # Enviar lembrete se estiver dentro de 1 hora do horário ideal
         return reminder_time <= now <= reminder_time + timedelta(hours=1)
     
