@@ -114,18 +114,18 @@ RUN chmod +x /app/entrypoint.sh && chown appuser:appuser /app/entrypoint.sh
 USER appuser
 
 # Expor porta da aplicação
-EXPOSE 5000
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:5000/health/ || exit 1
+    CMD curl -f http://localhost:8000/health/ || exit 1
 
 # Configurar entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Comando padrão para produção
 CMD ["gunicorn", \
-     "--bind", "0.0.0.0:5000", \
+     "--bind", "0.0.0.0:8000", \
      "--workers", "4", \
      "--worker-class", "gevent", \
      "--worker-connections", "1000", \

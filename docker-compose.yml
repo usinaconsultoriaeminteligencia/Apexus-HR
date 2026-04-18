@@ -1,8 +1,7 @@
 # Docker Compose para desenvolvimento local - Apexus HR
-# Use este arquivo para testar a plataforma localmente
+# Use este arquivo para executar toda a stack localmente
 
 services:
-  # Banco de dados PostgreSQL
   db:
     image: postgres:15-alpine
     container_name: apexus_hr_db_dev
@@ -22,7 +21,6 @@ services:
     networks:
       - apexus_hr_network
 
-  # Redis para cache
   redis:
     image: redis:7-alpine
     container_name: apexus_hr_redis_dev
@@ -38,9 +36,62 @@ services:
     networks:
       - apexus_hr_network
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: apexus_hr_backend_dev
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-apexus_hr}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-jwt-secret-change-in-production}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ENVIRONMENT: development
+      DEBUG: "true"
+      RUN_MIGRATIONS: "true"
+      ALLOWED_ORIGINS: "http://localhost:3000"
+      PYTHONPATH: /app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/migrations:/app/migrations
+      - backend_logs_dev:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - apexus_hr_network
+    command: >
+      sh -c "flask db upgrade && python src/main.py"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: apexus_hr_frontend_dev
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - apexus_hr_network
+
 volumes:
   postgres_dev_data:
   redis_dev_data:
+  backend_logs_dev:
 
 networks:
   apexus_hr_network:
