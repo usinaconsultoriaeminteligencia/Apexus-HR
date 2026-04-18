@@ -1,0 +1,80 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Apexus HR — Plataforma Inteligente de Recrutamento</title>
+
+  <!-- Favicons (mantenha seu favicon.ico; os PNGs são opcionais se existirem em /public) -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <!-- <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png"> -->
+
+  <!-- SEO básico -->
+  <meta name="description" content="Apexus HR — Plataforma inteligente de recrutamento com assessments auditáveis, entrevistas por áudio e conformidade LGPD." />
+  <meta name="keywords" content="RH, recursos humanos, recrutamento, seleção, candidatos, entrevistas, IA, inteligência artificial, LGPD" />
+  <meta name="author" content="Apexus HR" />
+  <meta name="robots" content="index, follow" />
+  <!-- Ajuste o canonical em produção (troque o domínio) -->
+  <link rel="canonical" href="https://localhost/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Apexus HR" />
+  <meta property="og:title" content="Apexus HR — Plataforma Inteligente de Recrutamento" />
+  <meta property="og:description" content="Decisões de contratação auditáveis com IA, rubricas comportamentais e conformidade LGPD." />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:url" content="https://localhost/" />
+  <!-- Forneça uma imagem real em produção e deixe em /public -->
+  <!-- <meta property="og:image" content="/og-image.png" /> -->
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Apexus HR — Plataforma Inteligente de Recrutamento" />
+  <meta name="twitter:description" content="Decisões de contratação auditáveis com IA para empresas enterprise." />
+  <!-- <meta name="twitter:image" content="/og-image.png" /> -->
+
+  <!-- Performance tipografia -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Preferência de tema e cores do navegador -->
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0f172a" />
+  <meta name="msapplication-TileColor" content="#3b82f6" />
+
+  <!-- PWA (opcional; ative se criar o arquivo manifest) -->
+  <!-- <link rel="manifest" href="/site.webmanifest"> -->
+</head>
+
+  <body>
+    <!-- Loading inicial -->
+    <div id="loading">
+      <div style="text-align: center;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Carregando Apexus HR...</div>
+      </div>
+    </div>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Script para ocultar loading -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loading = document.getElementById('loading');
+          if (loading) {
+            loading.style.opacity = '0';
+            setTimeout(function() {
+              loading.style.display = 'none';
+            }, 300);
+          }
+        }, 500);
+      });
+    </script>
+  </body>
+</html>

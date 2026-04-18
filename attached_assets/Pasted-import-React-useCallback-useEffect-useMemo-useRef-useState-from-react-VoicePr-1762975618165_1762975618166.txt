@@ -1,0 +1,363 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+/**
+ * VoiceProfileAssistant.jsx (CDN‑free version)
+ * ------------------------------------------------------------
+ * Correção do erro de build: removida a dependência de CDN/ESM de
+ * `@openai/agents-js`. Esta versão funciona apenas com APIs nativas do
+ * navegador (MediaRecorder/WebAudio) e com o seu backend Flask nas rotas:
+ *   - POST   /api/audio-interview/start
+ *   - GET    /api/audio-interview/:sessionId/question/info
+ *   - GET    /api/audio-interview/:sessionId/question   (retorna áudio)
+ *   - POST   /api/audio-interview/:sessionId/respond    (envia áudio)
+ *   - POST   /api/audio-interview/:sessionId/finalize   (retorna relatório)
+ *
+ * ✅ Funcionalidades
+ * - Capta áudio do microfone (MediaRecorder) e envia ao backend
+ * - Reproduz o áudio da pergunta fornecido pelo backend
+ * - Exibe transcript/log (se o backend retornar) e o JSON de resultado
+ * - Botão para salvar avaliação em endpoint opcional /api/assessments/save
+ * - Painel de auto‑testes sem dependências externas
+ *
+ * ⚠️ Requisitos
+ * - Defina VITE_API_URL (ex.: http://localhost:5000/api)
+ * - Backend exposto com as rotas acima
+ */
+
+/*****************************
+ * Utils HTTP
+ *****************************/
+const apiBase = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+
+async function postJSON(path, body) {
+  const res = await fetch(`${apiBase}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function getBinary(path) {
+  const res = await fetch(`${apiBase}${path}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  const type = res.headers.get("Content-Type") || blob.type || "audio/mpeg";
+  return { blob, type };
+}
+
+async function getJSON(path) {
+  const res = await fetch(`${apiBase}${path}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/*****************************
+ * Áudio helpers (gravação)
+ *****************************/
+function useRecorder({ mimeType = "audio/webm" } = {}) {
+  const mediaRef = useRef(null);
+  const recRef = useRef(null);
+  const chunksRef = useRef([]);
+  const [recording, setRecording] = useState(false);
+
+  const start = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("getUserMedia não suportado pelo navegador");
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRef.current = stream;
+
+    const rec = new MediaRecorder(stream, { mimeType });
+    chunksRef.current = [];
+
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    rec.onstart = () => setRecording(true);
+    rec.onstop = () => setRecording(false);
+
+    recRef.current = rec;
+    rec.start();
+  }, [mimeType]);
+
+  const stop = useCallback(async () => {
+    if (!recRef.current) return null;
+    const rec = recRef.current;
+    return new Promise((resolve) => {
+      rec.onstop = () => {
+        setRecording(false);
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType });
+        // encerra mídias
+        mediaRef.current?.getTracks?.().forEach((t) => t.stop());
+        resolve(blob);
+      };
+      rec.stop();
+    });
+  }, []);
+
+  return { start, stop, recording };
+}
+
+/*****************************
+ * Componente principal
+ *****************************/
+export default function VoiceProfileAssistant({
+  candidateName,
+  position,
+  seniority = "Pleno",
+  framework = "DISC", // "DISC" | "BigFive" | "Custom"
+  questionsPerDimension = 3,
+  language = "pt-BR",
+  autoStart = false,
+  onComplete,
+}) {
+  const [sessionId, setSessionId] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [log, setLog] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const audioRef = useRef(null);
+
+  const { start: startRec, stop: stopRec, recording } = useRecorder();
+
+  const introPrompt = useMemo(() => (
+    `Iniciando entrevista de perfil (${framework}) para o cargo ${position} (nível ${seniority}). ` +
+    `As perguntas serão por áudio. Confirme quando estiver pronto(a).`
+  ), [framework, position, seniority]);
+
+  /** Inicia sessão no backend */
+  const startSession = useCallback(async () => {
+    const resp = await postJSON("/audio-interview/start", {
+      candidate_name: candidateName,
+      position,
+    });
+    if (!resp?.success) throw new Error(resp?.error || "Falha ao iniciar sessão");
+    setSessionId(resp.session_id);
+    return resp.session_id;
+  }, [candidateName, position]);
+
+  /** Busca e reproduz a pergunta atual */
+  const playQuestion = useCallback(async (sid) => {
+    const id = sid || sessionId;
+    if (!id) throw new Error("Sessão não iniciada");
+
+    // (opcional) Mostrar info textual da pergunta
+    try {
+      const info = await getJSON(`/audio-interview/${id}/question/info`);
+      if (info?.text) setLog((p) => [...p, { role: "system", content: `Pergunta: ${info.text}` }]);
+    } catch (_) {/* tolera ausência de endpoint */}
+
+    const { blob, type } = await getBinary(`/audio-interview/${id}/question`);
+    const url = URL.createObjectURL(new Blob([blob], { type }));
+
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+    audioRef.current.src = url;
+    await audioRef.current.play();
+  }, [sessionId]);
+
+  /** Envia resposta gravada */
+  const sendResponse = useCallback(async (sid, blob) => {
+    const id = sid || sessionId;
+    if (!id) throw new Error("Sessão não iniciada");
+
+    const res = await fetch(`${apiBase}/audio-interview/${id}/respond`, {
+      method: "POST",
+      headers: { "Content-Type": blob?.type || "application/octet-stream" },
+      body: blob,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    if (json?.transcription) {
+      setLog((p) => [...p, { role: "user", content: json.transcription }]);
+    }
+    if (json?.message) setLog((p) => [...p, { role: "system", content: json.message }]);
+    if (json?.next === "question") {
+      await playQuestion(id);
+    }
+    return json;
+  }, [playQuestion, sessionId]);
+
+  /** Finaliza e obtém relatório */
+  const finalize = useCallback(async (sid) => {
+    const id = sid || sessionId;
+    if (!id) throw new Error("Sessão não iniciada");
+    const json = await postJSON(`/audio-interview/${id}/finalize`);
+    if (json?.success && json?.report) {
+      setSummary(json.report);
+    }
+    return json;
+  }, [sessionId]);
+
+  /*****************************
+   * Handlers UI
+   *****************************/
+  const handleStart = useCallback(async () => {
+    try {
+      setError(null);
+      setSummary(null);
+      setLog([]);
+      const sid = await startSession();
+      setRunning(true);
+      // Introdução (log textual)
+      setLog((p) => [...p, { role: "system", content: introPrompt }]);
+      await playQuestion(sid);
+    } catch (e) {
+      setError(e.message);
+      setRunning(false);
+    }
+  }, [introPrompt, playQuestion, startSession]);
+
+  const handleRecordToggle = useCallback(async () => {
+    try {
+      if (!recording) {
+        await startRec();
+      } else {
+        const blob = await stopRec();
+        await sendResponse(null, blob);
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+  }, [recording, sendResponse, startRec, stopRec]);
+
+  const handleFinalize = useCallback(async () => {
+    try {
+      const json = await finalize();
+      if (json?.success) setLog((p) => [...p, { role: "system", content: "Entrevista finalizada." }]);
+    } catch (e) {
+      setError(e.message);
+    }
+  }, [finalize]);
+
+  const handleSaveBackend = useCallback(async () => {
+    if (!summary) return;
+    setSaving(true);
+    try {
+      const payload = {
+        candidateName,
+        position,
+        seniority,
+        result: summary,
+        transcript: log.map((m) => m?.content ?? "").filter(Boolean),
+        sessionId,
+      };
+      const json = await postJSON("/assessments/save", payload);
+      console.log("[save]", json);
+      onComplete?.(summary);
+    } catch (e) {
+      setError(`Falha ao salvar no backend: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [candidateName, log, onComplete, position, seniority, sessionId, summary]);
+
+  // Autostart opcional
+  useEffect(() => {
+    if (autoStart) handleStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
+
+  /*****************************
+   * Auto‑tests (sem libs externas)
+   *****************************/
+  const [tests, setTests] = useState([]);
+  const runSelfTests = useCallback(async () => {
+    const results = [];
+    const expect = (name, cond) => results.push({ name, ok: !!cond });
+
+    // 1) Montagem de URL base
+    expect("apiBase definido", typeof apiBase === "string" && apiBase.length > 0);
+
+    // 2) Estrutura mínima de props obrigatórias
+    expect("candidateName informado", !!candidateName);
+    expect("position informada", !!position);
+
+    // 3) State machine básica
+    const prevRunning = running;
+    expect("flag running é booleana", typeof running === "boolean");
+    // simula alteração
+    expect("toggle simulado", typeof !prevRunning === "boolean");
+
+    // 4) Verifica helpers disponíveis
+    expect("funções HTTP disponíveis", postJSON && getBinary && getJSON);
+
+    setTests(results);
+  }, [candidateName, position, running]);
+
+  return (
+    <div className="w-full max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow-xl border">
+      <header className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Assistente de Voz — Análise de Perfil</h2>
+          <p className="text-sm text-gray-600">
+            Candidato: <strong>{candidateName}</strong> · Cargo: <strong>{position}</strong> · Nível: <strong>{seniority}</strong>
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {!running ? (
+            <button onClick={handleStart} className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+              Iniciar
+            </button>
+          ) : (
+            <button onClick={handleFinalize} className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
+              Finalizar
+            </button>
+          )}
+          <button onClick={handleRecordToggle} disabled={!running} className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+            {recording ? "Parar & Enviar" : "Gravar Resposta"}
+          </button>
+        </div>
+      </header>
+
+      <section className="mt-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Transcrição / Log</h3>
+        <div className="h-48 overflow-auto p-3 rounded-xl border bg-gray-50 text-sm space-y-1">
+          {log.length === 0 && <p className="text-gray-500">Aguardando perguntas e respostas...</p>}
+          {log.map((m, i) => (
+            <div key={i} className={m.role === "user" ? "text-gray-900" : "text-gray-700"}>
+              <span className="inline-block min-w-14 mr-2 text-xs uppercase tracking-wide text-gray-400">{m.role || "model"}</span>
+              <span>{m.content}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Resultado Estruturado</h3>
+        <div className="p-3 rounded-xl border bg-gray-50 text-sm">
+          {!summary ? (
+            <p className="text-gray-500">Finalize a entrevista para gerar o relatório.</p>
+          ) : (
+            <pre className="whitespace-pre-wrap break-words text-xs">{JSON.stringify(summary, null, 2)}</pre>
+          )}
+        </div>
+      </section>
+
+      <footer className="mt-6 flex items-center gap-3">
+        <button onClick={handleSaveBackend} disabled={!summary || saving} className="px-4 py-2 rounded-xl bg-indigo-600 text-white disabled:opacity-50">
+          {saving ? "Salvando..." : "Salvar no Backend"}
+        </button>
+        <button onClick={runSelfTests} className="px-4 py-2 rounded-xl bg-gray-100 border">Auto‑testes</button>
+      </footer>
+
+      {tests.length > 0 && (
+        <section className="mt-4 p-3 rounded-xl border bg-white text-sm">
+          <h4 className="font-semibold mb-2">Resultados dos auto‑testes</h4>
+          <ul className="list-disc ml-5">
+            {tests.map((t, i) => (
+              <li key={i} className={t.ok ? "text-emerald-700" : "text-red-600"}>
+                {t.ok ? "✔" : "✖"} {t.name}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,181 @@
+/* ========= TOKENS & RESETS ========= */
+:root {
+  /* cores base (claro) */
+  --bg: #f7f8fa;
+  --bg-panel: #ffffff;
+  --bg-panel-weak: #fafafa;
+
+  --text: #0f172a;              /* slate-900 */
+  --text-muted: #475569;        /* slate-600 */
+
+  --primary: #2563eb;           /* azul */
+  --primary-600: #1d4ed8;
+
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+
+  --border: #e5e7eb;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e5e7eb;
+  --sidebar-fg: #0f172a;
+  --sidebar-accent: #f4f6f8;
+
+  /* tipografia */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Inter, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  --fs-xs: 12px; --fs-sm: 14px; --fs-md: 16px; --fs-lg: 18px; --fs-xl: 24px; --fs-2xl: 32px;
+
+  /* espaçamento / raio / sombra */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --radius: 12px;
+  --shadow: 0 6px 20px rgba(2, 6, 23, 0.06);
+}
+
+html, body, #root { height: 100%; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========= MODO ESCURO ========= */
+.dark:root,
+.dark {
+  --bg: #0b1220;
+  --bg-panel: #0f172a;
+  --bg-panel-weak: #111b2f;
+
+  --text: #e5e7eb;
+  --text-muted: #94a3b8;
+
+  --primary: #3b82f6;
+  --primary-600: #2563eb;
+
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
+  --border: #1f2937;
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1f2937;
+  --sidebar-fg: #e5e7eb;
+  --sidebar-accent: #111b2f;
+}
+
+/* ========= MAPEAMENTO SEMÂNTICO (classes usadas no seu JSX) ========= */
+.bg-background { background: var(--bg); }
+.bg-card       { background: var(--bg-panel); }
+.bg-secondary  { background: var(--bg-panel-weak); }
+.bg-primary    { background: var(--primary); }
+.bg-sidebar    { background: var(--sidebar-bg); }
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-600) 100%);
+}
+
+.text-foreground { color: var(--text); }
+.text-muted-foreground { color: var(--text-muted); }
+.text-primary-foreground { color: #fff; }
+.text-secondary-foreground { color: var(--text); }
+
+.border-border { border-color: var(--border); }
+.border-sidebar-border { border-color: var(--sidebar-border); }
+
+.hover\:bg-accent:hover { background: var(--bg-panel-weak); }
+
+/* ========= LAYOUT & CONTAINERS ========= */
+.min-h-screen { min-height: 100vh; }
+.ml-64 { margin-left: 16rem; } /* sidebar fixa de 256px */
+
+.container-responsive {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/* ========= SIDEBAR ========= */
+.sidebar-nav { padding: 12px; display: grid; gap: 8px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: color-mix(in oklab, var(--sidebar-fg) 60%, transparent);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease, transform .08s ease;
+}
+.nav-item:hover { background: var(--sidebar-accent); color: var(--sidebar-fg); }
+.nav-item.active {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  border-color: color-mix(in oklab, var(--primary) 25%, transparent);
+  color: var(--sidebar-fg);
+}
+.nav-item svg { opacity: .9 }
+
+/* header (topbar simplificada do seu layout) */
+header { backdrop-filter: saturate(120%) blur(2px); }
+
+/* ========= CARDS / KPIs ========= */
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space-6);
+}
+
+.metric-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 1280px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 800px)  { .dashboard-grid { grid-template-columns: 1fr; } .ml-64 { margin-left: 0; } }
+
+.hover-lift { transition: transform 120ms ease, box-shadow 120ms ease; }
+.hover-lift:hover { transform: translateY(-2px); }
+.hover-glow:hover { box-shadow: 0 10px 30px rgba(37, 99, 235, 0.10); }
+
+.fade-in { animation: fade .25s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Badges de status usadas em CandidateCard */
+.status-success { background: color-mix(in oklab, var(--success) 15%, transparent); color: var(--success); }
+.status-warning { background: color-mix(in oklab, var(--warning) 15%, transparent); color: var(--warning); }
+.status-error   { background: color-mix(in oklab, var(--danger) 15%, transparent);  color: var(--danger); }
+.status-info    { background: color-mix(in oklab, var(--primary) 15%, transparent); color: var(--primary); }
+
+/* Inputs / botões simples que você usa por classe */
+input, select, textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid color-mix(in oklab, var(--primary) 40%, transparent);
+  outline-offset: 1px;
+}
+
+button.bg-primary {
+  box-shadow: 0 2px 12px color-mix(in oklab, var(--primary) 30%, transparent);
+}
+button.bg-primary:hover { background: var(--primary-600); }
+
+/* utilitários rápidos */
+.p-6 { padding: var(--space-6); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mb-6 { margin-bottom: var(--space-6); }
+

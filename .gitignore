@@ -1,0 +1,129 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+.venv/
+**/.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pythonlibs/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.production
+.env.development
+.env.*.local
+.env.txt
+# NUNCA versionar exemplos preenchidos com valores reais.
+# Se houver exemplo, chame de .env.example com placeholders apenas.
+env.production.example
+.env.production.example
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+postgres-data/
+
+# Logs
+*.log
+logs/
+*.log.*
+runtime-*.log
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.old
+
+# Uploads and media
+uploads/
+media/
+static/uploads/
+
+# Docker
+.dockerignore
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+
+# Replit
+.replit
+.local/
+.upm/
+.cache/
+.config/
+replit.nix
+pytest-cache-files-*/
+
+# Build artifacts
+*.pyc
+.sass-cache/
+*.css.map
+
+# Certificates (NEVER commit certificates)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Patches
+*.patch
+*.diff

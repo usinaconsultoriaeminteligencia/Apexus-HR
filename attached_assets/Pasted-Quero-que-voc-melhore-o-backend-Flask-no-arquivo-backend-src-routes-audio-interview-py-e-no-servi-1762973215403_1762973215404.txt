@@ -1,0 +1,41 @@
+Quero que você melhore o backend Flask no arquivo `backend/src/routes/audio_interview.py` e no serviço `backend/src/services/audio_interview_service.py`, implementando as seguintes funções e integrações de forma completa e profissional:
+
+1. **Integração com OpenAI**
+   - Adicionar suporte à API oficial da OpenAI (`openai` Python SDK).
+   - Criar no `audio_interview_service` as funções:
+     - `get_question_audio(session_id)`: gerar a pergunta em voz usando o modelo `gpt-4o-mini-tts` com `client.audio.speech.create(...)`.
+     - `submit_response(session_id, audio_bytes, content_type)`: transcrever o áudio com `gpt-4o-mini-transcribe` (`client.audio.transcriptions.create(...)`), armazenar o texto transcrito e enviar para avaliação semântica.
+     - `finalize_interview(session_id)`: consolidar as respostas e chamar o modelo `gpt-4o-mini` para gerar um relatório de perfil técnico e comportamental, incluindo:
+       - Pontuação técnica (0 a 10)
+       - Pontuação comportamental (0 a 10)
+       - Perfil DISC
+       - Feedback em texto
+
+2. **Boas Práticas**
+   - Adicionar logs detalhados em cada etapa (início, processamento, sucesso, erro).
+   - Implementar tratamento de exceções robusto e respostas JSON padronizadas.
+   - Validar tipo MIME e tamanho de arquivo (já implementado — manter).
+   - Armazenar temporariamente os áudios com `tempfile` e apagar após o uso.
+
+3. **Melhoria de Arquitetura**
+   - Adicionar fila de processamento assíncrona (opcional: Celery + Redis, se configurável no ambiente Replit).
+   - Centralizar as configurações de OpenAI (chave e modelo) em `config/openai_config.py`.
+   - Atualizar `requirements.txt` com `openai >= 1.0.0`.
+
+4. **Testes e Documentação**
+   - Adicionar docstrings e exemplos de uso.
+   - Testar rotas:
+     - `/api/audio-interview/start`
+     - `/api/audio-interview/<session_id>/question`
+     - `/api/audio-interview/<session_id>/respond`
+     - `/api/audio-interview/<session_id>/finalize`
+
+O código deve ser totalmente funcional, com respostas JSON no formato:
+{
+  "success": true,
+  "session_id": "...",
+  "data": {
+    "transcricao": "...",
+    "avaliacao": { ... }
+  }
+}
