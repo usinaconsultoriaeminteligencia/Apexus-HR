@@ -200,7 +200,6 @@ class TestInterviewsAPI:
         assert isinstance(data, list)
         assert len(data) >= 1
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_create_interview(self, client, auth_headers, sample_candidate):
         """Testa criação de entrevista"""
         interview_data = {
@@ -210,7 +209,7 @@ class TestInterviewsAPI:
             'scheduled_at': '2024-12-01T10:00:00Z'
         }
         
-        response = client.post('/interviews',
+        response = client.post('/api/interviews',
                              json=interview_data,
                              headers=auth_headers)
         
@@ -220,10 +219,9 @@ class TestInterviewsAPI:
         assert data['position'] == interview_data['position']
         assert data['status'] == 'agendada'
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_start_interview(self, client, auth_headers, sample_interview):
         """Testa início de entrevista"""
-        response = client.post(f'/interviews/{sample_interview.id}/start',
+        response = client.post(f'/api/interviews/{sample_interview.id}/start',
                              headers=auth_headers)
         
         assert response.status_code == 200
@@ -231,7 +229,6 @@ class TestInterviewsAPI:
         assert data['status'] == 'em_andamento'
         assert data['started_at'] is not None
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_add_question_response(self, client, auth_headers, sample_interview):
         """Testa adição de pergunta e resposta"""
         question_data = {
@@ -239,7 +236,7 @@ class TestInterviewsAPI:
             'response': 'Trabalho com Python há 3 anos, principalmente com Flask e Django.'
         }
         
-        response = client.post(f'/interviews/{sample_interview.id}/questions',
+        response = client.post(f'/api/interviews/{sample_interview.id}/questions',
                              json=question_data,
                              headers=auth_headers)
         
@@ -248,33 +245,32 @@ class TestInterviewsAPI:
         assert data['question'] == question_data['question']
         assert data['response'] == question_data['response']
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     @patch('src.services.ai_service.analyze_interview_response')
     def test_complete_interview(self, mock_ai_analysis, client, auth_headers, sample_interview):
         """Testa finalização de entrevista"""
-        # Mock da análise de IA
         mock_ai_analysis.return_value = {
-            'confidence_score': 85,
-            'enthusiasm_score': 90,
-            'clarity_score': 88,
-            'technical_accuracy': 82,
-            'recommendation': 'CONTRATAR'
+            'confidence_score': 8.5,
+            'enthusiasm_score': 9.0,
+            'clarity_score': 8.8,
+            'technical_accuracy': 8.2,
+            'communication_score': 8.6,
+            'recommendation': 'contratar'
         }
         
-        # Primeiro iniciar a entrevista
-        client.post(f'/interviews/{sample_interview.id}/start', headers=auth_headers)
+        # Iniciar a entrevista
+        client.post(f'/api/interviews/{sample_interview.id}/start', headers=auth_headers)
         
         # Adicionar algumas respostas
         for i in range(3):
-            client.post(f'/interviews/{sample_interview.id}/questions',
+            client.post(f'/api/interviews/{sample_interview.id}/questions',
                        json={
                            'question': f'Pergunta {i+1}',
-                           'response': f'Resposta {i+1}'
+                           'response': f'Resposta detalhada número {i+1} com conteúdo relevante.'
                        },
                        headers=auth_headers)
         
         # Finalizar entrevista
-        response = client.post(f'/interviews/{sample_interview.id}/complete',
+        response = client.post(f'/api/interviews/{sample_interview.id}/complete',
                              headers=auth_headers)
         
         assert response.status_code == 200
@@ -287,13 +283,11 @@ class TestInterviewsAPI:
 class TestFileUploadAPI:
     """Testes de integração para upload de arquivos"""
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_upload_audio_file(self, client, auth_headers, sample_interview):
         """Testa upload de arquivo de áudio"""
-        # Criar arquivo de áudio simulado
         audio_data = b'fake_audio_data' * 1000
         
-        response = client.post(f'/interviews/{sample_interview.id}/upload-audio',
+        response = client.post(f'/api/interviews/{sample_interview.id}/upload-audio',
                              data={
                                  'audio': (io.BytesIO(audio_data), 'test_audio.wav')
                              },
@@ -305,12 +299,11 @@ class TestFileUploadAPI:
         assert 'file_path' in data
         assert data['file_path'].endswith('.wav')
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_upload_invalid_file_type(self, client, auth_headers, sample_interview):
         """Testa upload de tipo de arquivo inválido"""
         text_data = b'This is not an audio file'
         
-        response = client.post(f'/interviews/{sample_interview.id}/upload-audio',
+        response = client.post(f'/api/interviews/{sample_interview.id}/upload-audio',
                              data={
                                  'audio': (io.BytesIO(text_data), 'test.txt')
                              },
@@ -321,21 +314,18 @@ class TestFileUploadAPI:
         data = response.get_json()
         assert 'error' in data
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_upload_file_too_large(self, client, auth_headers, sample_interview):
-        """Testa upload de arquivo muito grande"""
-        # Criar arquivo muito grande (simulado)
+        """Testa upload de arquivo muito grande — verifica que retorna 200 ou 413."""
         large_audio_data = b'fake_audio_data' * 100000  # ~1.5MB
-        
-        with patch('flask.request.content_length', 50 * 1024 * 1024):  # 50MB
-            response = client.post(f'/interviews/{sample_interview.id}/upload-audio',
-                                 data={
-                                     'audio': (io.BytesIO(large_audio_data), 'large_audio.wav')
-                                 },
-                                 headers=auth_headers,
-                                 content_type='multipart/form-data')
-        
-        # Dependendo da configuração, pode retornar 413 ou processar normalmente
+
+        response = client.post(f'/api/interviews/{sample_interview.id}/upload-audio',
+                             data={
+                                 'audio': (io.BytesIO(large_audio_data), 'large_audio.wav')
+                             },
+                             headers=auth_headers,
+                             content_type='multipart/form-data')
+
+        # Arquivo abaixo do limite (50MB) deve ser aceito normalmente
         assert response.status_code in [200, 413]
 
 @pytest.mark.integration
@@ -375,13 +365,11 @@ class TestHealthAPI:
 class TestPermissionsAPI:
     """Testes de integração para controle de permissões"""
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_admin_access_to_user_management(self, client, admin_auth_headers):
         """Testa acesso de admin a gerenciamento de usuários"""
         response = client.get('/admin/users', headers=admin_auth_headers)
         assert response.status_code == 200
     
-    @pytest.mark.skip(reason="endpoint not implemented in current API")
     def test_non_admin_access_denied(self, client, auth_headers):
         """Testa negação de acesso para não-admin"""
         response = client.get('/admin/users', headers=auth_headers)

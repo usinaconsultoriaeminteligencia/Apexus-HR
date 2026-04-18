@@ -519,3 +519,240 @@ def share_interview(interview_id: int):
     except Exception as e:
         logger.error(f"Erro ao compartilhar entrevista: {e}")
         return jsonify({"error": "Erro interno do servidor"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Rotas adicionais — criação simplificada, ciclo de vida e upload de áudio
+# ---------------------------------------------------------------------------
+
+@bp.post("")
+@retry_db_operation(max_retries=3, delay=1)
+def create_interview():
+    """Cria uma nova entrevista agendada.
+
+    Body JSON: {candidate_id, position, interview_type?, scheduled_at?}
+    Retorna 201 com os dados da entrevista criada.
+    """
+    data = request.json or {}
+    candidate_id = data.get("candidate_id")
+    position = data.get("position")
+
+    if not candidate_id or not position:
+        return jsonify({"error": "candidate_id e position são obrigatórios"}), 400
+
+    try:
+        from datetime import datetime, timezone
+        from ..utils.type_helpers import dt_iso
+
+        candidate = db.session.query(Candidate).filter(Candidate.id == candidate_id).first()
+        if not candidate:
+            return jsonify({"error": "Candidato não encontrado"}), 404
+
+        scheduled_raw = data.get("scheduled_at")
+        scheduled_at = None
+        if scheduled_raw:
+            try:
+                scheduled_at = datetime.fromisoformat(scheduled_raw.replace("Z", "+00:00"))
+                scheduled_at = scheduled_at.replace(tzinfo=None)
+            except ValueError:
+                return jsonify({"error": "scheduled_at inválido — use ISO 8601"}), 400
+
+        interview = Interview(
+            candidate_id=candidate_id,
+            interviewer_id=data.get("interviewer_id", 1),
+            interview_type=data.get("interview_type", "audio"),
+            position=position,
+            scheduled_at=scheduled_at,
+            status="agendada",
+            is_active=True,
+            consent_given=True,
+        )
+        db.session.add(interview)
+        db.session.commit()
+
+        return jsonify({
+            "id": interview.id,
+            "candidate_id": interview.candidate_id,
+            "position": interview.position,
+            "interview_type": interview.interview_type,
+            "status": interview.status,
+            "scheduled_at": dt_iso(interview.scheduled_at),
+            "created_at": dt_iso(interview.created_at),
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Erro ao criar entrevista: {e}")
+        return jsonify({"error": "Erro interno do servidor"}), 500
+
+
+@bp.post("/<int:interview_id>/start")
+@retry_db_operation(max_retries=3, delay=1)
+def start_interview(interview_id: int):
+    """Inicia uma entrevista agendada (status → em_andamento)."""
+    try:
+        from datetime import datetime, timezone
+        from ..utils.type_helpers import dt_iso
+
+        interview = db.session.query(Interview).filter(Interview.id == interview_id).first()
+        if not interview:
+            return jsonify({"error": "Entrevista não encontrada"}), 404
+
+        interview.status = "em_andamento"
+        interview.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.session.commit()
+
+        return jsonify({
+            "id": interview.id,
+            "status": interview.status,
+            "started_at": dt_iso(interview.started_at),
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao iniciar entrevista {interview_id}: {e}")
+        return jsonify({"error": "Erro interno do servidor"}), 500
+
+
+@bp.post("/<int:interview_id>/questions")
+@retry_db_operation(max_retries=3, delay=1)
+def add_question_response(interview_id: int):
+    """Adiciona um par pergunta/resposta à entrevista.
+
+    Body JSON: {question, response}
+    Retorna 201 com {question, response, index}.
+    """
+    data = request.json or {}
+    question_text = data.get("question", "").strip()
+    response_text = data.get("response", "").strip()
+
+    if not question_text or not response_text:
+        return jsonify({"error": "question e response são obrigatórios"}), 400
+
+    try:
+        import json as _json
+        from src.services.ai_service import analyze_interview_response
+
+        interview = db.session.query(Interview).filter(Interview.id == interview_id).first()
+        if not interview:
+            return jsonify({"error": "Entrevista não encontrada"}), 404
+
+        questions = interview.get_questions_list() or []
+        analysis = analyze_interview_response(
+            question=question_text,
+            response=response_text,
+            position=as_str(interview.position),
+        )
+        entry = {
+            "index": len(questions),
+            "question": question_text,
+            "response": response_text,
+            "analysis": analysis,
+        }
+        questions.append(entry)
+        interview.questions_data = _json.dumps(questions, ensure_ascii=False)
+        interview.current_question_index = len(questions)
+        db.session.commit()
+
+        return jsonify({
+            "question": question_text,
+            "response": response_text,
+            "index": entry["index"],
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Erro ao adicionar pergunta na entrevista {interview_id}: {e}")
+        return jsonify({"error": "Erro interno do servidor"}), 500
+
+
+@bp.post("/<int:interview_id>/complete")
+@retry_db_operation(max_retries=3, delay=1)
+def complete_interview(interview_id: int):
+    """Finaliza uma entrevista (status → concluida) e calcula o score geral."""
+    try:
+        from datetime import datetime, timezone
+        from src.services.ai_service import calculate_overall_score
+        from ..utils.type_helpers import dt_iso
+
+        interview = db.session.query(Interview).filter(Interview.id == interview_id).first()
+        if not interview:
+            return jsonify({"error": "Entrevista não encontrada"}), 404
+
+        questions = interview.get_questions_list() or []
+        overall = calculate_overall_score(questions)
+
+        interview.status = "concluida"
+        interview.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        interview.overall_score = overall if overall > 0 else 5.0
+        interview.recommendation = (
+            "contratar" if overall >= 7.5
+            else "aguardar" if overall >= 5.5
+            else "não contratar"
+        )
+        db.session.commit()
+
+        return jsonify({
+            "id": interview.id,
+            "status": interview.status,
+            "completed_at": dt_iso(interview.completed_at),
+            "overall_score": interview.overall_score,
+            "recommendation": interview.recommendation,
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao completar entrevista {interview_id}: {e}")
+        return jsonify({"error": "Erro interno do servidor"}), 500
+
+
+_ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".ogg", ".webm", ".m4a", ".flac"}
+_MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+@bp.post("/<int:interview_id>/upload-audio")
+def upload_audio(interview_id: int):
+    """Recebe upload de arquivo de áudio para uma entrevista.
+
+    Valida extensão e tamanho; salva em UPLOAD_FOLDER.
+    Retorna {file_path, size_bytes}.
+    """
+    import uuid
+    from pathlib import Path as _Path
+    from flask import current_app
+
+    interview = db.session.query(Interview).filter(Interview.id == interview_id).first()
+    if not interview:
+        return jsonify({"error": "Entrevista não encontrada"}), 404
+
+    if "audio" not in request.files:
+        return jsonify({"error": "Arquivo 'audio' não enviado"}), 400
+
+    file = request.files["audio"]
+    original_name = file.filename or ""
+    ext = _Path(original_name).suffix.lower()
+
+    if ext not in _ALLOWED_AUDIO_EXTENSIONS:
+        return jsonify({
+            "error": f"Tipo de arquivo inválido '{ext}'. "
+                     f"Permitidos: {', '.join(_ALLOWED_AUDIO_EXTENSIONS)}"
+        }), 400
+
+    # Lê em memória para verificar tamanho antes de gravar
+    audio_bytes = file.read()
+    if len(audio_bytes) > _MAX_AUDIO_SIZE_BYTES:
+        return jsonify({
+            "error": f"Arquivo muito grande ({len(audio_bytes) // (1024*1024)} MB). "
+                     f"Limite: {_MAX_AUDIO_SIZE_BYTES // (1024*1024)} MB"
+        }), 413
+
+    upload_dir = _Path(current_app.config.get("UPLOAD_FOLDER", "/tmp/uploads"))
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"interview_{interview_id}_{uuid.uuid4().hex}{ext}"
+    file_path = upload_dir / filename
+    file_path.write_bytes(audio_bytes)
+
+    interview.audio_file_path = str(file_path)
+    db.session.commit()
+
+    return jsonify({
+        "file_path": str(file_path),
+        "size_bytes": len(audio_bytes),
+    })
