@@ -38,7 +38,6 @@ from src.routes.feedback import bp as feedback_bp
 from src.routes.health import bp as health_bp
 from src.routes.health_advanced import health_bp as health_advanced_bp
 from src.routes.interviews import bp as interviews_bp
-from src.routes.interviews import bp_api as interviews_api_bp
 from src.routes.privacy import privacy_bp
 from src.routes.product_intelligence import bp as product_intelligence_bp
 from src.routes.reports import reports_bp
@@ -183,13 +182,12 @@ def create_app(include_socketio=False):
     app.register_blueprint(health_bp)
     app.register_blueprint(health_advanced_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(users_bp)
+    app.register_blueprint(users_bp, url_prefix="/api/users")
     app.register_blueprint(candidates_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(privacy_bp)
     app.register_blueprint(audio_interview_bp)
-    app.register_blueprint(interviews_bp)
-    app.register_blueprint(interviews_api_bp)
+    app.register_blueprint(interviews_bp, url_prefix="/api/interviews")
     app.register_blueprint(reports_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(assessments_bp)

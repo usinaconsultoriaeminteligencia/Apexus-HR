@@ -282,7 +282,7 @@ class TestAssessmentsEndpoint:
         itv = self._seed_interview_with_assessments(db_session, admin, candidate)
 
         rv = client.get(
-            f'/interviews/{itv.id}/assessments',
+            f'/api/interviews/{itv.id}/assessments',
             headers={'Authorization': f'Bearer {admin.generate_token()}'},
         )
         assert rv.status_code == 200
@@ -308,7 +308,7 @@ class TestAssessmentsEndpoint:
         db_session.commit()
 
         rv = client.get(
-            f'/interviews/{itv.id}/assessments',
+            f'/api/interviews/{itv.id}/assessments',
             headers={'Authorization': f'Bearer {viewer.generate_token()}'},
         )
         assert rv.status_code == 200

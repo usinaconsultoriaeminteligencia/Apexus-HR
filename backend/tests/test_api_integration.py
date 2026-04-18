@@ -193,7 +193,7 @@ class TestInterviewsAPI:
     
     def test_list_interviews(self, client, auth_headers, sample_interview):
         """Testa listagem de entrevistas"""
-        response = client.get('/interviews', headers=auth_headers)
+        response = client.get('/api/interviews', headers=auth_headers)
         
         assert response.status_code == 200
         data = response.get_json()
