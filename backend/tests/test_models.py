@@ -391,19 +391,27 @@ class TestInterviewModel:
         assert 0 <= sample_interview.confidence_level <= 1
     
     def test_recommendation_logic(self, sample_interview):
-        """Testa lógica de recomendação"""
-        # Score alto deve recomendar contratação
-        sample_interview.overall_score = 85.0
+        """Testa lógica de recomendação baseada nos limiares de score"""
+        def _set_all_components(itv, value):
+            itv.confidence_score = value
+            itv.enthusiasm_score = value
+            itv.clarity_score = value
+            itv.technical_accuracy = value
+            itv.content_relevance = value
+            itv.communication_skills = value
+
+        # Componentes altos (score geral >= 80) → CONTRATAR
+        _set_all_components(sample_interview, 85.0)
         sample_interview.calculate_overall_score()
         assert sample_interview.recommendation == 'CONTRATAR'
-        
-        # Score médio deve considerar
-        sample_interview.overall_score = 65.0
+
+        # Componentes médios (60 <= score geral < 80) → CONSIDERAR
+        _set_all_components(sample_interview, 65.0)
         sample_interview.calculate_overall_score()
         assert sample_interview.recommendation == 'CONSIDERAR'
-        
-        # Score baixo deve rejeitar
-        sample_interview.overall_score = 45.0
+
+        # Componentes baixos (score geral < 60) → REJEITAR
+        _set_all_components(sample_interview, 45.0)
         sample_interview.calculate_overall_score()
         assert sample_interview.recommendation == 'REJEITAR'
     

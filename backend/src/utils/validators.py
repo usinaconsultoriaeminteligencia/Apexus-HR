@@ -231,6 +231,11 @@ class CandidateValidator:
             else:
                 errors.append("Skills deve ser uma lista ou string")
         
+        # Campos de texto opcionais (sem validação especial)
+        for text_field in ['current_company', 'current_position', 'source', 'ai_recommendation']:
+            if text_field in data and data[text_field] is not None:
+                validated_data[text_field] = str(data[text_field]).strip()
+        
         if errors:
             raise ValidationError("Erros de validação: " + "; ".join(errors))
         

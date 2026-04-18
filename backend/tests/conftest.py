@@ -53,11 +53,19 @@ def runner(app):
 
 @pytest.fixture
 def db_session(app):
-    """Sessão de banco de dados para testes"""
+    """Sessão de banco de dados com isolamento total por teste.
+
+    Destrói e recria todas as tabelas antes de cada teste para evitar
+    IntegrityError por emails fixos nas fixtures (sample_user, etc.)
+    quando o DB scope='session' é compartilhado. O commit() das
+    fixtures fica em disco normalmente — o drop_all() do próximo
+    ciclo limpa tudo antes que conflite.
+    """
     with app.app_context():
-        db.session.begin()
+        db.drop_all()
+        db.create_all()
         yield db.session
-        db.session.rollback()
+        db.session.remove()
 
 @pytest.fixture
 def sample_user(db_session):

@@ -206,13 +206,20 @@ def update_candidate(current_user, candidate_id):
         # Validar dados
         try:
             validated_data = CandidateValidator.validate_candidate_data(data, is_update=True)
-        except ValidationError as e:
+        except ValidatorError as e:
             raise AppValidationError(str(e))
         
-        # Atualizar campos
+        # Atualizar campos (skills requer tratamento especial)
+        skills = validated_data.pop('skills', None)
         for field, value in validated_data.items():
             if hasattr(c, field):
                 setattr(c, field, value)
+        
+        if skills is not None:
+            if isinstance(skills, list):
+                c.set_skills_list(skills)
+            else:
+                c.skills = skills
         
         # Recalcular score
         c.calculate_overall_score()

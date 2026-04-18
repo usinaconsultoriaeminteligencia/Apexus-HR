@@ -94,7 +94,10 @@ def require_auth(fn):
         try:
             # injeta current_user como 1º argumento nomeado
             return fn(current_user=user, *args, **kwargs)
-        except Exception:
+        except Exception as exc:
+            from src.utils.error_handler import AppError
+            if isinstance(exc, AppError):
+                raise  # Propaga AppError para os handlers do Flask
             logging.exception("Erro interno em rota protegida")
             return jsonify({"success": False, "message": "Erro interno do servidor"}), 500
 
