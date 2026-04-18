@@ -78,18 +78,8 @@ docker compose up backend --build -d
 # 3. Verificar saúde do backend
 curl http://localhost:8000/health/
 
-# 4. Criar usuário administrador inicial
-docker exec apexus_hr_backend_dev python -c "
-from src.main import app
-from src.models import db
-from src.models.user import User
-with app.app_context():
-    u = User(email='admin@apexus.hr', full_name='Admin', role='admin',
-             is_active=True, is_verified=True, consent_given=True)
-    u.set_password('admin123')
-    db.session.add(u); db.session.commit()
-    print('Usuário criado:', u.email)
-"
+# 4. Popular banco com usuários, candidatos e entrevistas de exemplo
+docker exec apexus_hr_backend_dev python scripts/seed_dev.py
 
 # 5. Rodar o frontend
 cd frontend
